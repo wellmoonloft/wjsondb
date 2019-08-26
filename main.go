@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/wjsondb/db"
+	"io/ioutil"
 )
 
 type Customer struct {
@@ -17,6 +19,11 @@ type Contact struct {
 	Email string `json:"email"`
 }
 
+//配置文件构造体
+type Info struct {
+	Db_dir string
+}
+
 //ID any struct that needs to persist should implement this function defined
 //in Entity interface.
 func (c Customer) ID() (jsonField string, value interface{}) {
@@ -25,10 +32,35 @@ func (c Customer) ID() (jsonField string, value interface{}) {
 	return
 }
 
-func main() {
-	fmt.Println("starting....")
+type JsonStruct struct {
+}
 
-	driver, err := db.New("mydir")
+func NewJsonStruct() *JsonStruct {
+	return &JsonStruct{}
+}
+
+func (jst *JsonStruct) Load(filename string, v interface{}) {
+	//ReadFile函数会读取文件的全部内容，并将结果以[]byte类型返回
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+
+	//读取的数据为json格式，需要进行解码
+	err = json.Unmarshal(data, v)
+	if err != nil {
+		return
+	}
+}
+
+func main() {
+	fmt.Println("wjsondb starting....")
+
+	JsonParse := NewJsonStruct()
+	v := Info{}
+	JsonParse.Load("./conf/info.json", &v)
+	fmt.Println("wjsondb's dbfile was saved at " + v.Db_dir + "....")
+	driver, err := db.New(v.Db_dir)
 
 	if err != nil {
 		panic(err)
@@ -91,11 +123,12 @@ func main() {
 	fmt.Printf("%#v \n", customerFirst)
 
 	// Delete
-	//toDel:=Customer{
-	//	CustID:"CUST1",
-	//}
-	//err=driver.Delete(toDel)
-	//if(err!=nil){
-	//	panic(err)
-	//}
+	toDel := Customer{
+		CustID: "CUST1",
+	}
+
+	err = driver.Delete(toDel)
+	if err != nil {
+		panic(err)
+	}
 }
